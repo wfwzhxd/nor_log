@@ -150,6 +150,8 @@ int main(void)
             assert(saved_next_addr == my_ctx.next_entry_addr);
         }
 
+        // Initialize the entire entry to zero to ensure consistent CRC calculation
+        memset(entry, 0, sizeof(entry));
         // Note: entry[0] is log_id, entry[1] is now crc16, so user data starts at entry[2]
         entry[2] = 100 + i;
         nor_log_append(&my_ctx, (base_log_entry_t *)entry);
