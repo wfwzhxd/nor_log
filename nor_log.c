@@ -38,7 +38,7 @@ union
 #define flash_read(addr, buf, len) memcpy(buf, ((void *)(addr + (0xFFFFFFFF00000000 & ((size_t)&sectors)))), len)
 
 #ifndef CRC16
-#define CRC16(data, len) (0xcc16)  // Default implementation, user should provide their own
+#define CRC16(data, len) (0xcc16)
 #endif
 
 typedef struct
@@ -111,10 +111,10 @@ void nor_log_append(nor_log_ctx_t *ctx, base_log_entry_t *log_entry)
     uint32_t id = entry_addr2id(ctx, ctx->next_entry_addr);
     log_entry->log_id = id;
     
-    // Compute CRC16 over the entire log entry
-    // First, set crc16 field to zero for computation
+
+
     log_entry->crc16 = 0;
-    // Compute CRC over the entire entry size
+
     uint16_t computed_crc = CRC16((const void*)log_entry, ctx->sizeof_log_entry);
     log_entry->crc16 = computed_crc;
     
@@ -150,9 +150,9 @@ int main(void)
             assert(saved_next_addr == my_ctx.next_entry_addr);
         }
 
-        // Initialize the entire entry to zero to ensure consistent CRC calculation
+
         memset(entry, 0, sizeof(entry));
-        // Note: entry[0] is log_id, entry[1] is now crc16, so user data starts at entry[2]
+
         entry[2] = 100 + i;
         nor_log_append(&my_ctx, (base_log_entry_t *)entry);
 
