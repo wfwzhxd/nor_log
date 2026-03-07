@@ -39,6 +39,11 @@ union
 
 typedef struct
 {
+    uint32_t log_id;
+} base_log_entry_t;
+
+typedef struct
+{
     uint32_t first_entry_addr;
     uint32_t last_entry_addr;
     uint32_t sizeof_log_entry;
@@ -96,10 +101,10 @@ void nor_log_init_next_entry_addr(nor_log_ctx_t *ctx)
     }
 }
 
-void nor_log_append(nor_log_ctx_t *ctx, void *log_entry)
+void nor_log_append(nor_log_ctx_t *ctx, base_log_entry_t *log_entry)
 {
     uint32_t id = entry_addr2id(ctx, ctx->next_entry_addr);
-    memcpy(log_entry, &id, sizeof(uint32_t));
+    log_entry->log_id = id;
     flash_write(ctx->next_entry_addr, log_entry, ctx->sizeof_log_entry);
     ctx->next_entry_addr += ctx->sizeof_log_entry;
     if (ctx->next_entry_addr > ctx->last_entry_addr)
@@ -131,9 +136,9 @@ int main(void)
         {
             assert(saved_next_addr == my_ctx.next_entry_addr);
         }
-        
+
         entry[1] = 100 + i;
-        nor_log_append(&my_ctx, entry);
+        nor_log_append(&my_ctx, (base_log_entry_t *)entry);
 
         saved_next_addr = my_ctx.next_entry_addr;
     }
