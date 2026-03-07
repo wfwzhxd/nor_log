@@ -113,7 +113,6 @@ void nor_log_append(nor_log_ctx_t *ctx, base_log_entry_t *log_entry)
     
     // Compute CRC16 over the entire log entry
     // First, set crc16 field to zero for computation
-    uint16_t original_crc = log_entry->crc16;
     log_entry->crc16 = 0;
     // Compute CRC over the entire entry size
     uint16_t computed_crc = CRC16((const void*)log_entry, ctx->sizeof_log_entry);
