@@ -293,13 +293,13 @@ void nor_log_append(nor_log_ctx_t *ctx, base_log_entry_t *log_entry)
  * 
  * Parameters:
  *   ctx - Log context
- *   log_entry - Buffer to store the read entry (at least ctx->sizeof_log_entry bytes)
  *   log_entry_idx - Zero-based index of the entry to read
+ *   log_entry - Buffer to store the read entry (at least ctx->sizeof_log_entry bytes)
  * Returns:
  *   true if the index is valid and the entry has valid CRC and log id consistency,
  *   false otherwise (invalid index or corrupted entry)
  */
-bool nor_log_read(nor_log_ctx_t *ctx, base_log_entry_t *log_entry, uint32_t log_entry_idx)
+bool nor_log_read(nor_log_ctx_t *ctx, uint32_t log_entry_idx, base_log_entry_t *log_entry)
 {
     /* Calculate maximum valid index */
     uint32_t max_idx = (ctx->last_entry_addr - ctx->first_entry_addr) / ctx->sizeof_log_entry;
@@ -405,7 +405,7 @@ int main(void)
         /* Read back and verify the entry */
         uint32_t idx = (write_addr - my_ctx.first_entry_addr) / my_ctx.sizeof_log_entry;
         uint32_t read_back[16];
-        bool success = nor_log_read(&my_ctx, (base_log_entry_t *)read_back, idx);
+        bool success = nor_log_read(&my_ctx, idx, (base_log_entry_t *)read_back);
         assert(success);
         assert(memcmp(entry, read_back, my_ctx.sizeof_log_entry) == 0);
         
