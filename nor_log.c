@@ -187,7 +187,7 @@ static inline bool is_entry_valid_at_address(nor_log_ctx_t *ctx, uint32_t addr, 
  *                   Must be at least ctx->sizeof_log_entry bytes in size.
  *                   The buffer contents may be modified by this function.
  */
-void nor_log_init_next_entry_addr(nor_log_ctx_t *ctx, base_log_entry_t *tmp_log_entry)
+void nor_log_init(nor_log_ctx_t *ctx, base_log_entry_t *tmp_log_entry)
 {
     /* Ensure the address range is properly aligned to entry size */
     assert((ctx->last_entry_addr - ctx->first_entry_addr) % ctx->sizeof_log_entry == 0);
@@ -381,7 +381,7 @@ int main(void)
             my_ctx.first_entry_addr = 0xFFFFFFFF & ((size_t)&sectors[0].log_entry[0]);
             my_ctx.last_entry_addr = 0xFFFFFFFF & ((size_t)&sectors[ARRAY_SIZE(sectors) - 1].log_entry[3]);
             my_ctx.sizeof_log_entry = sizeof(sectors[0].log_entry[0]);
-            nor_log_init_next_entry_addr(&my_ctx, (base_log_entry_t *)entry);
+            nor_log_init(&my_ctx, (base_log_entry_t *)entry);
             do_init = false;
         }
         

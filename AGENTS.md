@@ -105,7 +105,7 @@ Example:
 - Public API functions are declared without `static`.
 - Function definitions have the return type on the same line as the function name, with the opening brace on a new line:
 ```c
-void nor_log_init_next_entry_addr(nor_log_ctx_t *ctx)
+void nor_log_init(nor_log_ctx_t *ctx, base_log_entry_t *tmp_log_entry)
 {
     // ...
 }
