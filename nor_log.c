@@ -86,6 +86,16 @@ union
 #define CRC16(data, len) (0xcc16)
 #endif
 
+/*
+ * CRC16 initial value for calculation
+ *
+ * Standard CRC16 algorithms often use 0xFFFF as initial value.
+ * This can be customized for different CRC16 variants.
+ */
+#ifndef CRC16_INIT
+#define CRC16_INIT 0xFFFF
+#endif
+
 /* Basic log entry structure - contains common fields */
 typedef struct
 {
@@ -102,6 +112,9 @@ typedef struct
     uint32_t first_entry_id;    /* ID of the first entry (0 or 1) */
     uint32_t next_entry_addr;   /* Address where next entry will be written */
 } nor_log_ctx_t;
+
+/* Function declarations */
+bool nor_log_checkcrc(nor_log_ctx_t *ctx, base_log_entry_t *log_entry);
 
 /* Read the log entry ID from a given flash address */
 static inline uint32_t read_entry_id(uint32_t addr)
@@ -209,7 +222,7 @@ void nor_log_append(nor_log_ctx_t *ctx, base_log_entry_t *log_entry)
     log_entry->log_id = id;
     
     /* Calculate CRC16 checksum for the entire log entry */
-    log_entry->crc16 = 0;  /* Temporary zero for CRC calculation */
+    log_entry->crc16 = CRC16_INIT;  /* Set initial value for CRC calculation */
     uint16_t computed_crc = CRC16((const void*)log_entry, ctx->sizeof_log_entry);
     log_entry->crc16 = computed_crc;
     
@@ -225,6 +238,27 @@ void nor_log_append(nor_log_ctx_t *ctx, base_log_entry_t *log_entry)
         ctx->first_entry_id = ctx->first_entry_id ? 0 : 1;
         ctx->next_entry_addr = ctx->first_entry_addr;
     }
+}
+
+/*
+ * Check CRC integrity of a log entry
+ *
+ * This function verifies the CRC checksum of a log entry.
+ * Steps:
+ * 1. Save the original CRC value
+ * 2. Set crc16 field to CRC16_INIT (same as during calculation)
+ * 3. Compute CRC over the entire entry
+ * 4. Restore original CRC value (non-destructive check)
+ * 5. Return true if computed CRC matches original CRC
+ */
+bool nor_log_checkcrc(nor_log_ctx_t *ctx, base_log_entry_t *log_entry)
+{
+    uint16_t original_crc = log_entry->crc16;
+    log_entry->crc16 = CRC16_INIT;
+    uint16_t computed_crc = CRC16((const void*)log_entry, ctx->sizeof_log_entry);
+    log_entry->crc16 = original_crc;  /* Restore original value */
+    (void)ctx;  /* ctx is used via ctx->sizeof_log_entry in CRC16 macro */
+    return computed_crc == original_crc;
 }
 
 /* Test context and state variables */
