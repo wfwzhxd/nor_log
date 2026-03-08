@@ -118,13 +118,7 @@ void nor_log_init_next_entry_addr(nor_log_ctx_t *ctx, base_log_entry_t *tmp_log_
 void nor_log_append(nor_log_ctx_t *ctx, base_log_entry_t *log_entry);
 bool nor_log_checkcrc(nor_log_ctx_t *ctx, base_log_entry_t *log_entry);
 
-/* Read the log entry ID from a given flash address */
-static inline uint32_t read_entry_id(uint32_t addr)
-{
-    uint32_t id;
-    flash_read(addr, &id, sizeof(id));
-    return id;
-}
+
 
 /*
  * Address/ID conversion macros
@@ -139,8 +133,7 @@ static inline uint32_t read_entry_id(uint32_t addr)
 /* Convert log entry ID to flash address */
 #define entry_id2addr(ctx, id) (ctx->first_entry_addr + ((id) - ctx->first_entry_id) * ctx->sizeof_log_entry)
 
-/* Check if an address contains a valid log entry ID */
-#define is_address_has_valid_entry_id(ctx, address) (entry_id2addr(ctx, read_entry_id(address)) == address)
+
 
 /*
  * Check if an entry at given address is valid
@@ -193,48 +186,58 @@ void nor_log_init_next_entry_addr(nor_log_ctx_t *ctx, base_log_entry_t *tmp_log_
     /* Ensure the address range is properly aligned to entry size */
     assert((ctx->last_entry_addr - ctx->first_entry_addr) % ctx->sizeof_log_entry == 0);
 
-    /* Read the ID from the first entry to determine log state */
-    ctx->first_entry_id = read_entry_id(ctx->first_entry_addr);
-
-    /* If first entry has ID 0 or 1, log follows our convention */
-    if ((0 == ctx->first_entry_id) || (1 == ctx->first_entry_id))
+    /* Check if the first entry is valid (CRC correct and log id consistent) */
+    if (is_entry_valid_at_address(ctx, ctx->first_entry_addr, tmp_log_entry))
     {
-        /* Check if the last entry is valid (log is full) */
-        if (is_entry_valid_at_address(ctx, ctx->last_entry_addr, tmp_log_entry))
+        /* First entry is valid, get its ID */
+        ctx->first_entry_id = tmp_log_entry->log_id;
+        
+        /* If first entry has ID 0 or 1, log follows our convention */
+        if ((0 == ctx->first_entry_id) || (1 == ctx->first_entry_id))
         {
-            /* Log is full - wrap around to beginning */
-            ctx->first_entry_id = ctx->first_entry_id ? 0 : 1;
-            ctx->next_entry_addr = ctx->first_entry_addr;
+            /* Check if the last entry is valid (log is full) */
+            if (is_entry_valid_at_address(ctx, ctx->last_entry_addr, tmp_log_entry))
+            {
+                /* Log is full - wrap around to beginning */
+                ctx->first_entry_id = ctx->first_entry_id ? 0 : 1;
+                ctx->next_entry_addr = ctx->first_entry_addr;
+            }
+            else
+            {
+                /* Log is partially filled - find last valid entry using binary search */
+                uint32_t left = entry_addr2id(ctx, ctx->first_entry_addr);
+                uint32_t right = entry_addr2id(ctx, ctx->last_entry_addr);
+                
+                while (right >= left)
+                {
+                    uint32_t mid = left + (right - left) / 2;
+                    if (is_entry_valid_at_address(ctx, entry_id2addr(ctx, mid), tmp_log_entry))
+                    {
+                        /* mid is valid, search right half */
+                        left = mid + 1;
+                    }
+                    else
+                    {
+                        /* mid is invalid, search left half */
+                        right = mid - 1;
+                    }
+                }
+                
+                /* left points to first invalid entry, which is where we write next */
+                ctx->next_entry_addr = entry_id2addr(ctx, left);
+            }
         }
         else
         {
-            /* Log is partially filled - find last valid entry using binary search */
-            uint32_t left = entry_addr2id(ctx, ctx->first_entry_addr);
-            uint32_t right = entry_addr2id(ctx, ctx->last_entry_addr);
-            
-            while (right >= left)
-            {
-                uint32_t mid = left + (right - left) / 2;
-                if (is_entry_valid_at_address(ctx, entry_id2addr(ctx, mid), tmp_log_entry))
-                {
-                    /* mid is valid, search right half */
-                    left = mid + 1;
-                }
-                else
-                {
-                    /* mid is invalid, search left half */
-                    right = mid - 1;
-                }
-            }
-            
-            /* left points to first invalid entry, which is where we write next */
-            ctx->next_entry_addr = entry_id2addr(ctx, left);
+            /* First entry has valid CRC but ID is not 0 or 1 - treat as empty log */
+            ctx->first_entry_id = 0;
+            ctx->next_entry_addr = ctx->first_entry_addr;
         }
     }
     else
     {
-        /* First entry has invalid ID - treat as empty log */
-        ctx->first_entry_id = ctx->first_entry_id ? 0 : 1;
+        /* First entry is invalid (CRC error or log id inconsistent) - treat as empty log */
+        ctx->first_entry_id = 0;
         ctx->next_entry_addr = ctx->first_entry_addr;
     }
 }
