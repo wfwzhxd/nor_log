@@ -136,6 +136,28 @@ bool nor_log_checkcrc(nor_log_ctx_t *ctx, base_log_entry_t *log_entry);
 
 
 /*
+ * Check if an entry at given address is valid (CRC only)
+ *
+ * This function checks only CRC validity, without verifying log id consistency.
+ * Used during initialization when first_entry_id is not yet known.
+ *
+ * Parameters:
+ *   ctx - Log context
+ *   addr - Flash address to check
+ *   tmp_log_entry - Buffer for reading the entry (at least ctx->sizeof_log_entry bytes)
+ * Returns:
+ *   true if entry has valid CRC, false otherwise
+ */
+static inline bool is_entry_crc_valid_at_address(nor_log_ctx_t *ctx, uint32_t addr, base_log_entry_t *tmp_log_entry)
+{
+    /* Read entire entry into caller-provided buffer */
+    flash_read(addr, tmp_log_entry, ctx->sizeof_log_entry);
+    
+    /* Check CRC validity only */
+    return nor_log_checkcrc(ctx, tmp_log_entry);
+}
+
+/*
  * Check if an entry at given address is valid
  *
  * An entry is considered valid if:
@@ -186,8 +208,8 @@ void nor_log_init_next_entry_addr(nor_log_ctx_t *ctx, base_log_entry_t *tmp_log_
     /* Ensure the address range is properly aligned to entry size */
     assert((ctx->last_entry_addr - ctx->first_entry_addr) % ctx->sizeof_log_entry == 0);
 
-    /* Check if the first entry is valid (CRC correct and log id consistent) */
-    if (is_entry_valid_at_address(ctx, ctx->first_entry_addr, tmp_log_entry))
+    /* Check if the first entry has valid CRC (log id consistency checked later) */
+    if (is_entry_crc_valid_at_address(ctx, ctx->first_entry_addr, tmp_log_entry))
     {
         /* First entry is valid, get its ID */
         ctx->first_entry_id = tmp_log_entry->log_id;
@@ -236,7 +258,7 @@ void nor_log_init_next_entry_addr(nor_log_ctx_t *ctx, base_log_entry_t *tmp_log_
     }
     else
     {
-        /* First entry is invalid (CRC error or log id inconsistent) - treat as empty log */
+        /* First entry is invalid (CRC error) - treat as empty log */
         ctx->first_entry_id = 0;
         ctx->next_entry_addr = ctx->first_entry_addr;
     }
@@ -334,6 +356,7 @@ int main(void)
             my_ctx.last_entry_addr = 0xFFFFFFFF & ((size_t)&sectors[ARRAY_SIZE(sectors) - 1].log_entry[3]);
             my_ctx.sizeof_log_entry = sizeof(sectors[0].log_entry[0]);
             nor_log_init_next_entry_addr(&my_ctx, (base_log_entry_t *)entry);
+            do_init = false;
         }
         
         /* Verify next_entry_addr matches expected location in flat array */
