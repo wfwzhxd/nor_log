@@ -86,22 +86,11 @@ union
 #define CRC16(data, len) (0xcc16)
 #endif
 
-/*
- * Log entry structure
- *
- * Total size: 64 bytes (matching flash_ram.log_entry)
- * Layout:
- *   log_id:  4 bytes (32-bit identifier)
- *   crc16:   2 bytes (CRC16 checksum)
- *   reserved: 2 bytes (padding for alignment)
- *   data:    56 bytes (14 x uint32_t payload)
- */
+/* Basic log entry structure - contains common fields */
 typedef struct
 {
-    uint32_t log_id;          /* Unique identifier for this log entry */
-    uint16_t crc16;           /* CRC16 checksum for data integrity */
-    uint16_t reserved;        /* Padding for 64-bit alignment */
-    uint32_t data[14];        /* Payload data (56 bytes) */
+    uint32_t log_id;    /* Unique identifier for this log entry */
+    uint16_t crc16;     /* CRC16 checksum for data integrity */
 } base_log_entry_t;
 
 /* NOR log context structure */
@@ -219,9 +208,8 @@ void nor_log_append(nor_log_ctx_t *ctx, base_log_entry_t *log_entry)
     uint32_t id = entry_addr2id(ctx, ctx->next_entry_addr);
     log_entry->log_id = id;
     
-    /* Calculate CRC16 checksum */
-    log_entry->crc16 = 0;      /* Temporary zero for CRC calculation */
-    log_entry->reserved = 0;   /* Ensure reserved field is zero for consistent CRC */
+    /* Calculate CRC16 checksum for the entire log entry */
+    log_entry->crc16 = 0;  /* Temporary zero for CRC calculation */
     uint16_t computed_crc = CRC16((const void*)log_entry, ctx->sizeof_log_entry);
     log_entry->crc16 = computed_crc;
     
