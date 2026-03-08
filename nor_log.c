@@ -114,6 +114,8 @@ typedef struct
 } nor_log_ctx_t;
 
 /* Function declarations */
+void nor_log_init_next_entry_addr(nor_log_ctx_t *ctx, base_log_entry_t *tmp_log_entry);
+void nor_log_append(nor_log_ctx_t *ctx, base_log_entry_t *log_entry);
 bool nor_log_checkcrc(nor_log_ctx_t *ctx, base_log_entry_t *log_entry);
 
 /* Read the log entry ID from a given flash address */
@@ -141,6 +143,34 @@ static inline uint32_t read_entry_id(uint32_t addr)
 #define is_address_has_valid_entry_id(ctx, address) (entry_id2addr(ctx, read_entry_id(address)) == address)
 
 /*
+ * Check if an entry at given address is valid
+ *
+ * An entry is considered valid if:
+ * 1. The log_id at the address maps back to the same address (log id consistency)
+ * 2. The CRC16 checksum is valid for the entire entry
+ *
+ * Parameters:
+ *   ctx - Log context
+ *   addr - Flash address to check
+ *   tmp_log_entry - Buffer for reading the entry (at least ctx->sizeof_log_entry bytes)
+ * Returns:
+ *   true if entry is valid, false otherwise
+ */
+static inline bool is_entry_valid_at_address(nor_log_ctx_t *ctx, uint32_t addr, base_log_entry_t *tmp_log_entry)
+{
+    /* Read entire entry into caller-provided buffer */
+    flash_read(addr, tmp_log_entry, ctx->sizeof_log_entry);
+    
+    /* Check log id consistency */
+    if (entry_id2addr(ctx, tmp_log_entry->log_id) != addr) {
+        return false;
+    }
+    
+    /* Check CRC validity */
+    return nor_log_checkcrc(ctx, tmp_log_entry);
+}
+
+/*
  * Initialize the log context and determine the next write address
  *
  * This function analyzes the current state of the flash memory and sets up
@@ -151,8 +181,14 @@ static inline uint32_t read_entry_id(uint32_t addr)
  *
  * For partially filled logs, it uses binary search to find the last valid
  * entry, which determines where the next entry should be written.
+ *
+ * Parameters:
+ *   ctx - Log context to initialize
+ *   tmp_log_entry - Buffer for temporary storage of log entries during scanning.
+ *                   Must be at least ctx->sizeof_log_entry bytes in size.
+ *                   The buffer contents may be modified by this function.
  */
-void nor_log_init_next_entry_addr(nor_log_ctx_t *ctx)
+void nor_log_init_next_entry_addr(nor_log_ctx_t *ctx, base_log_entry_t *tmp_log_entry)
 {
     /* Ensure the address range is properly aligned to entry size */
     assert((ctx->last_entry_addr - ctx->first_entry_addr) % ctx->sizeof_log_entry == 0);
@@ -164,7 +200,7 @@ void nor_log_init_next_entry_addr(nor_log_ctx_t *ctx)
     if ((0 == ctx->first_entry_id) || (1 == ctx->first_entry_id))
     {
         /* Check if the last entry is valid (log is full) */
-        if (is_address_has_valid_entry_id(ctx, ctx->last_entry_addr))
+        if (is_entry_valid_at_address(ctx, ctx->last_entry_addr, tmp_log_entry))
         {
             /* Log is full - wrap around to beginning */
             ctx->first_entry_id = ctx->first_entry_id ? 0 : 1;
@@ -179,7 +215,7 @@ void nor_log_init_next_entry_addr(nor_log_ctx_t *ctx)
             while (right >= left)
             {
                 uint32_t mid = left + (right - left) / 2;
-                if (is_address_has_valid_entry_id(ctx, entry_id2addr(ctx, mid)))
+                if (is_entry_valid_at_address(ctx, entry_id2addr(ctx, mid), tmp_log_entry))
                 {
                     /* mid is valid, search right half */
                     left = mid + 1;
@@ -294,7 +330,7 @@ int main(void)
             my_ctx.first_entry_addr = 0xFFFFFFFF & ((size_t)&sectors[0].log_entry[0]);
             my_ctx.last_entry_addr = 0xFFFFFFFF & ((size_t)&sectors[ARRAY_SIZE(sectors) - 1].log_entry[3]);
             my_ctx.sizeof_log_entry = sizeof(sectors[0].log_entry[0]);
-            nor_log_init_next_entry_addr(&my_ctx);
+            nor_log_init_next_entry_addr(&my_ctx, (base_log_entry_t *)entry);
         }
         
         /* Verify next_entry_addr matches expected location in flat array */
