@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <string.h>
+#include "nor_log.h"
 
 /* Helper macro to get the number of elements in an array */
 #define ARRAY_SIZE(ARRAY) (sizeof(ARRAY) / sizeof(ARRAY[0]))
@@ -96,27 +97,7 @@ union
 #define CRC16_INIT 0xFFFF
 #endif
 
-/* Basic log entry structure - contains common fields */
-typedef struct
-{
-    uint32_t log_id;    /* Unique identifier for this log entry */
-    uint16_t crc16;     /* CRC16 checksum for data integrity */
-} base_log_entry_t;
 
-/* NOR log context structure */
-typedef struct
-{
-    uint32_t first_entry_addr;  /* Address of first log entry in flash */
-    uint32_t last_entry_addr;   /* Address of last log entry in flash */
-    uint32_t sizeof_log_entry;  /* Size of each log entry in bytes */
-    uint32_t first_entry_id;    /* ID of the first entry (0 or 1) */
-    uint32_t next_entry_addr;   /* Address where next entry will be written */
-} nor_log_ctx_t;
-
-/* Function declarations */
-void nor_log_init_next_entry_addr(nor_log_ctx_t *ctx, base_log_entry_t *tmp_log_entry);
-void nor_log_append(nor_log_ctx_t *ctx, base_log_entry_t *log_entry);
-bool nor_log_checkcrc(nor_log_ctx_t *ctx, base_log_entry_t *log_entry);
 
 
 
@@ -134,6 +115,9 @@ bool nor_log_checkcrc(nor_log_ctx_t *ctx, base_log_entry_t *log_entry);
 #define entry_id2addr(ctx, id) (ctx->first_entry_addr + ((id) - ctx->first_entry_id) * ctx->sizeof_log_entry)
 
 
+
+/* Static function declarations */
+static bool nor_log_checkcrc(nor_log_ctx_t *ctx, base_log_entry_t *log_entry);
 
 /*
  * Check if an entry at given address is valid (CRC only)
@@ -302,6 +286,48 @@ void nor_log_append(nor_log_ctx_t *ctx, base_log_entry_t *log_entry)
 }
 
 /*
+ * Read a log entry by index
+ *
+ * This function reads a log entry at the specified index into the provided buffer.
+ * The index is zero-based, corresponding to the first entry in the log.
+ * 
+ * Parameters:
+ *   ctx - Log context
+ *   log_entry - Buffer to store the read entry (at least ctx->sizeof_log_entry bytes)
+ *   log_entry_idx - Zero-based index of the entry to read
+ * Returns:
+ *   true if the index is valid and the entry has valid CRC and log id consistency,
+ *   false otherwise (invalid index or corrupted entry)
+ */
+bool nor_log_read(nor_log_ctx_t *ctx, base_log_entry_t *log_entry, uint32_t log_entry_idx)
+{
+    /* Calculate maximum valid index */
+    uint32_t max_idx = (ctx->last_entry_addr - ctx->first_entry_addr) / ctx->sizeof_log_entry;
+    
+    /* Check if index is within valid range */
+    if (log_entry_idx > max_idx)
+    {
+        return false;
+    }
+    
+    /* Calculate address from index */
+    uint32_t addr = ctx->first_entry_addr + log_entry_idx * ctx->sizeof_log_entry;
+    
+    /* Read entry into buffer */
+    flash_read(addr, log_entry, ctx->sizeof_log_entry);
+    
+    /* Check CRC validity first */
+    if (!nor_log_checkcrc(ctx, log_entry)) {
+        return false;
+    }
+    
+    /* Check log id consistency - allow for first_entry_id being 0 or 1 */
+    uint32_t offset = (addr - ctx->first_entry_addr) / ctx->sizeof_log_entry;
+    uint32_t fid = log_entry->log_id - offset;
+    return (fid == 0 || fid == 1);
+}
+
+/*
  * Check CRC integrity of a log entry
  *
  * This function verifies the CRC checksum of a log entry.
@@ -312,7 +338,7 @@ void nor_log_append(nor_log_ctx_t *ctx, base_log_entry_t *log_entry)
  * 4. Restore original CRC value (non-destructive check)
  * 5. Return true if computed CRC matches original CRC
  */
-bool nor_log_checkcrc(nor_log_ctx_t *ctx, base_log_entry_t *log_entry)
+static bool nor_log_checkcrc(nor_log_ctx_t *ctx, base_log_entry_t *log_entry)
 {
     uint16_t original_crc = log_entry->crc16;
     log_entry->crc16 = CRC16_INIT;
@@ -373,8 +399,16 @@ int main(void)
         entry[2] = 100 + i;  /* Store iteration count in data field */
         
         /* Append the log entry */
+        uint32_t write_addr = my_ctx.next_entry_addr;
         nor_log_append(&my_ctx, (base_log_entry_t *)entry);
-
+        
+        /* Read back and verify the entry */
+        uint32_t idx = (write_addr - my_ctx.first_entry_addr) / my_ctx.sizeof_log_entry;
+        uint32_t read_back[16];
+        bool success = nor_log_read(&my_ctx, (base_log_entry_t *)read_back, idx);
+        assert(success);
+        assert(memcmp(entry, read_back, my_ctx.sizeof_log_entry) == 0);
+        
         /* Save next_entry_addr for next iteration's validation */
         saved_next_addr = my_ctx.next_entry_addr;
     }
