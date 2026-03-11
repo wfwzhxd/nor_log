@@ -1,0 +1,56 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-g",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c99",
+      "-pedantic",
+      "-c",
+      "-o",
+      "nor_log_test.o",
+      "nor_log_test.c"
+    ],
+    "directory": "/home/hunter/c/nor_log",
+    "file": "/home/hunter/c/nor_log/nor_log_test.c",
+    "output": "/home/hunter/c/nor_log/nor_log_test.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-g",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c99",
+      "-pedantic",
+      "-c",
+      "-o",
+      "nor_log.o",
+      "nor_log.c"
+    ],
+    "directory": "/home/hunter/c/nor_log",
+    "file": "/home/hunter/c/nor_log/nor_log.c",
+    "output": "/home/hunter/c/nor_log/nor_log.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-g",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-std=c99",
+      "-pedantic",
+      "-c",
+      "-o",
+      "example.o",
+      "example.c"
+    ],
+    "directory": "/home/hunter/c/nor_log",
+    "file": "/home/hunter/c/nor_log/example.c",
+    "output": "/home/hunter/c/nor_log/example.o"
+  }
+]
