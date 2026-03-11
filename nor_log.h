@@ -11,6 +11,10 @@ typedef struct
     uint16_t crc16;     /* CRC16 checksum for data integrity */
 } base_log_entry_t;
 
+/* Flash operation function pointers */
+typedef void (*flash_write_func_t)(uint32_t addr, const void *buf, uint32_t len);
+typedef void (*flash_read_func_t)(uint32_t addr, void *buf, uint32_t len);
+
 /* NOR log context structure */
 typedef struct
 {
@@ -18,6 +22,8 @@ typedef struct
     uint32_t first_entry_addr;  /* Address of first log entry in flash */
     uint32_t last_entry_addr;   /* Address of last log entry in flash */
     uint32_t sizeof_log_entry;  /* Size of each log entry in bytes */
+    flash_write_func_t flash_write;  /* Flash write function pointer */
+    flash_read_func_t flash_read;    /* Flash read function pointer */
     
     /* Fields calculated by nor_log_init (do not set manually) */
     uint32_t first_entry_id;    /* ID of the first entry (0 or 1) */
@@ -36,7 +42,7 @@ typedef struct
  *
  * Parameters:
  *   ctx - Log context (user must set first_entry_addr, last_entry_addr,
- *         sizeof_log_entry before calling)
+ *         sizeof_log_entry, flash_write, flash_read before calling)
  *   tmp_log_entry - Buffer for temporary storage during scanning
  *                   (must be at least ctx->sizeof_log_entry bytes)
  */
