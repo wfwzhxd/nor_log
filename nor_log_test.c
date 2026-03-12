@@ -82,24 +82,17 @@ static void test_flash_read(uint32_t addr, void *buf, uint32_t len)
 }
 
 /*
- * CRC16 checksum stub
+ * Test hash function - simple stub for testing
  *
- * This is a placeholder implementation. In a real system, this should be
- * replaced with an actual CRC16 calculation function.
+ * In a real system, this should be replaced with an actual
+ * hash/checksum calculation function (e.g., CRC16, Adler-32, etc.)
  */
-#ifndef CRC16
-#define CRC16(data, len) (0xcc16)
-#endif
-
-/*
- * CRC16 initial value for calculation
- *
- * Standard CRC16 algorithms often use 0xFFFF as initial value.
- * This can be customized for different CRC16 variants.
- */
-#ifndef CRC16_INIT
-#define CRC16_INIT 0xFFFF
-#endif
+static uint16_t test_hash_func(const void *data, uint32_t len)
+{
+    (void)data;
+    (void)len;
+    return 0xCC16;  /* Stub value for testing */
+}
 
 /* Test context and state variables */
 static nor_log_ctx_t my_ctx;           /* Log context for testing */
@@ -136,6 +129,7 @@ int main(void)
             my_ctx.sizeof_log_entry = sizeof(sectors[0].log_entry[0]);
             my_ctx.flash_write = test_flash_write;
             my_ctx.flash_read = test_flash_read;
+            my_ctx.hash_func = test_hash_func;
             nor_log_init(&my_ctx, (base_log_entry_t *)entry);
             do_init = false;
         }

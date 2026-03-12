@@ -28,6 +28,25 @@ static void example_flash_read(uint32_t addr, void *buf, uint32_t len)
     }
 }
 
+/* Example hash function - CRC16-CCITT implementation */
+static uint16_t example_hash_func(const void *data, uint32_t len)
+{
+    uint16_t crc = HASH_INIT;
+    const uint8_t *ptr = (const uint8_t *)data;
+    
+    while (len--) {
+        crc ^= (*ptr++ << 8);
+        for (int i = 0; i < 8; i++) {
+            if (crc & 0x8000) {
+                crc = (crc << 1) ^ 0x1021;
+            } else {
+                crc <<= 1;
+            }
+        }
+    }
+    return crc;
+}
+
 /* Extended log entry structure for this example */
 typedef struct
 {
@@ -51,6 +70,7 @@ int main(void)
     ctx.last_entry_addr = ctx.first_entry_addr + (16 * ctx.sizeof_log_entry) - ctx.sizeof_log_entry;
     ctx.flash_write = example_flash_write;
     ctx.flash_read = example_flash_read;
+    ctx.hash_func = example_hash_func;
     
     /* Temporary buffer for initialization */
     example_log_entry_t tmp_entry;
