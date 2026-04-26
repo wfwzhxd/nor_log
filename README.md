@@ -67,7 +67,7 @@ static void my_flash_read(uint32_t addr, void *buf, uint32_t len) {
 /* 定义hash计算函数 - 需要用户自己实现 */
 /* 示例：CRC16-CCITT实现（也可以使用其他算法如CRC32、Adler-32等） */
 static uint16_t my_hash_func(const void *data, uint32_t len) {
-    uint16_t crc = HASH_INIT;  /* HASH_INIT defined in nor_log.h */
+    uint16_t crc = 0xFFFF;  /* CRC-16-CCITT init value */
     const uint8_t *ptr = (const uint8_t *)data;
     
     while (len--) {
@@ -153,7 +153,7 @@ int main(void) {
 3. **代码复用**: 可以与系统中其他模块共享相同的hash实现
 4. **算法自由**: 不限制于CRC系列算法，可以使用任何16位hash函数
 
-hash函数通过`nor_log_ctx_t.hash_func`函数指针设置，初始值使用`HASH_INIT`（定义在`nor_log.h`中）。
+hash函数通过`nor_log_ctx_t.hash_func`函数指针设置，初始值通过`nor_log_ctx_t.hash_init`字段指定（例如CRC-16通常为`0xFFFF`）。
 
 **集成方法**：
 ```c
@@ -178,7 +178,7 @@ typedef struct {
     uint16_t hash;      /* hash/checksum值 - 确保数据完整性，使用用户提供的hash函数计算 */
 } base_log_entry_t;
 
-**重要**: `hash`字段的值由用户通过`nor_log_ctx_t.hash_func`函数指针提供的hash函数计算。hash计算应覆盖整个日志条目（包括`log_id`和`hash`字段本身）。初始值使用`HASH_INIT`（定义在`nor_log.h`中）。
+**重要**: `hash`字段的值由用户通过`nor_log_ctx_t.hash_func`函数指针提供的hash函数计算。hash计算应覆盖整个日志条目（包括`log_id`和`hash`字段本身）。计算前库会将`hash`字段置为`ctx->hash_init`（例如CRC-16通常为`0xFFFF`），然后再调用`hash_func`进行计算。
 
 #### `nor_log_ctx_t`
 日志上下文结构：

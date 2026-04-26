@@ -262,7 +262,7 @@ bool nor_log_read(nor_log_ctx_t *ctx, uint32_t log_entry_idx, base_log_entry_t *
  * This function verifies the hash/checksum of a log entry.
  * Steps:
  * 1. Save the original hash value
- * 2. Set hash field to HASH_INIT (same as during calculation)
+ * 2. Set hash field to ctx->hash_init (same as during calculation)
  * 3. Compute hash over the entire entry using ctx->hash_func
  * 4. Restore original hash value (non-destructive check)
  * 5. Return true if computed hash matches original hash
