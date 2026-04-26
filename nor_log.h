@@ -18,9 +18,6 @@ typedef void (*flash_read_func_t)(uint32_t addr, void *buf, uint32_t len);
 /* Hash/checksum function pointer */
 typedef uint16_t (*hash_func_t)(const void *data, uint32_t len);
 
-/* Hash initial value - typically 0xFFFF for CRC16 variants */
-#define HASH_INIT 0xFFFF
-
 /* NOR log context structure */
 typedef struct
 {
@@ -31,6 +28,7 @@ typedef struct
     flash_write_func_t flash_write;  /* Flash write function pointer */
     flash_read_func_t flash_read;    /* Flash read function pointer */
     hash_func_t hash_func;           /* Hash/checksum function pointer */
+    uint16_t hash_init;              /* Hash initial value (e.g. 0xFFFF for CRC-16) */
     
     /* Fields calculated by nor_log_init (do not set manually) */
     uint32_t first_entry_id;    /* ID of the first entry (0 or 1) */

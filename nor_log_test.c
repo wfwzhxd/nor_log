@@ -130,6 +130,7 @@ int main(void)
             my_ctx.flash_write = test_flash_write;
             my_ctx.flash_read = test_flash_read;
             my_ctx.hash_func = test_hash_func;
+            my_ctx.hash_init = 0xFFFF;
             nor_log_init(&my_ctx, (base_log_entry_t *)entry);
             do_init = false;
         }

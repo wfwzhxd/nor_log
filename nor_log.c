@@ -196,7 +196,7 @@ void nor_log_append(nor_log_ctx_t *ctx, base_log_entry_t *log_entry)
     log_entry->log_id = id;
     
     /* Calculate hash/checksum for the entire log entry */
-    log_entry->hash = HASH_INIT;  /* Set initial value for hash calculation */
+    log_entry->hash = ctx->hash_init;  /* Set initial value for hash calculation */
     uint16_t computed_hash = ctx->hash_func((const void*)log_entry, ctx->sizeof_log_entry);
     log_entry->hash = computed_hash;
     
@@ -270,7 +270,7 @@ bool nor_log_read(nor_log_ctx_t *ctx, uint32_t log_entry_idx, base_log_entry_t *
 static bool nor_log_checkhash(nor_log_ctx_t *ctx, base_log_entry_t *log_entry)
 {
     uint16_t original_hash = log_entry->hash;
-    log_entry->hash = HASH_INIT;
+    log_entry->hash = ctx->hash_init;
     uint16_t computed_hash = ctx->hash_func((const void*)log_entry, ctx->sizeof_log_entry);
     log_entry->hash = original_hash;  /* Restore original value */
     return computed_hash == original_hash;

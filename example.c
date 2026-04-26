@@ -31,7 +31,7 @@ static void example_flash_read(uint32_t addr, void *buf, uint32_t len)
 /* Example hash function - CRC16-CCITT implementation */
 static uint16_t example_hash_func(const void *data, uint32_t len)
 {
-    uint16_t crc = HASH_INIT;
+    uint16_t crc = 0xFFFF;
     const uint8_t *ptr = (const uint8_t *)data;
     
     while (len--) {
@@ -71,6 +71,7 @@ int main(void)
     ctx.flash_write = example_flash_write;
     ctx.flash_read = example_flash_read;
     ctx.hash_func = example_hash_func;
+    ctx.hash_init = 0xFFFF;
     
     /* Temporary buffer for initialization */
     example_log_entry_t tmp_entry;
