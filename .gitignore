@@ -2,3 +2,6 @@
 
 nor_log
 .aider*
+
+.cache/
+.opencode/
